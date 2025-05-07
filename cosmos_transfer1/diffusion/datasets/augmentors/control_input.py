@@ -41,6 +41,18 @@ from cosmos_transfer1.diffusion.datasets.augmentors.human_keypoint_utils import 
 )
 from cosmos_transfer1.utils import log
 
+
+
+def detect_aspect_ratio(img_size: tuple[int]):
+    """Function for detecting the closest aspect ratio."""
+
+    _aspect_ratios = np.array([(16 / 9), (4 / 3), 1, (3 / 4), (9 / 16)])
+    _aspect_ratio_keys = ["16,9", "4,3", "1,1", "3,4", "9,16"]
+    w, h = img_size
+    current_ratio = w / h
+    closest_aspect_ratio = np.argmin((_aspect_ratios - current_ratio) ** 2)
+    return _aspect_ratio_keys[closest_aspect_ratio]
+
 IMAGE_RES_SIZE_INFO: dict[str, tuple[int, int]] = {
     "1080": {  # the image format does not support 1080, but here we match it with video resolution
         "1,1": (1024, 1024),
@@ -113,7 +125,7 @@ def resize_frames(frames, is_image, data_dict):
     elif "aspect_ratio" in data_dict:  # Non-webdataset format
         aspect_ratio = data_dict["aspect_ratio"]
     else:
-        aspect_ratio = "16,9"
+        aspect_ratio = detect_aspect_ratio((W, H))
     RES_SIZE_INFO = IMAGE_RES_SIZE_INFO if is_image else VIDEO_RES_SIZE_INFO
     new_W, new_H = RES_SIZE_INFO["720"][aspect_ratio]
     scaling_ratio = min((new_W / W), (new_H / H))
