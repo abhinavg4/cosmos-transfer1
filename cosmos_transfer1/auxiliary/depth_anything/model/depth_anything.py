@@ -144,7 +144,22 @@ class DepthAnythingModel:
 
     @staticmethod
     def write_video(frames, output_path, fps=30):
-        with imageio.get_writer(output_path, fps=fps, macro_block_size=8) as writer:
+        with imageio.get_writer(
+            output_path,
+            fps=fps,
+            codec='libvpx-vp9',
+            quality=None,
+            bitrate=0,
+            output_params=[
+                '-f', 'mp4',
+                '-crf', '30',  # Quality setting (0-63, lower is better quality)
+                '-deadline', 'realtime',  # Optimize for real-time encoding
+                '-cpu-used', '4',  # Speed/quality tradeoff (0-8, higher is faster)
+                '-row-mt', '1',  # Enable row-based multi-threading
+                '-tile-columns', '2',  # Enable tile-based encoding
+                '-tile-rows', '2'  # Enable tile-based encoding
+            ]
+        ) as writer:
             for frame in frames:
                 if len(frame.shape) == 2:  # single channel
                     frame = frame[:, :, None].repeat(3, axis=2)

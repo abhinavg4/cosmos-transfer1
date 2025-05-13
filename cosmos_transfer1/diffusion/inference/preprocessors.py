@@ -17,8 +17,8 @@ import json
 import os
 
 from cosmos_transfer1.auxiliary.depth_anything.model.depth_anything import DepthAnythingModel
-from cosmos_transfer1.auxiliary.human_keypoint.human_keypoint import HumanKeypointModel
 from cosmos_transfer1.auxiliary.sam2.sam2_model import VideoSegmentationModel
+from cosmos_transfer1.auxiliary.human_keypoint.human_keypoint import HumanKeypointModel
 from cosmos_transfer1.utils import log
 
 
@@ -30,6 +30,8 @@ class Preprocessors:
 
     def __call__(self, input_video, input_prompt, control_inputs, output_folder):
         for hint_key in control_inputs:
+            if hint_key == "prompt" or hint_key == "video":
+                continue
             if hint_key in ["depth", "seg", "keypoint"]:
                 self.gen_input_control(input_video, input_prompt, hint_key, control_inputs[hint_key], output_folder)
 
@@ -56,7 +58,6 @@ class Preprocessors:
                     weight_scaler=weight_scaler,
                     binarize_video=True,
                 )
-                control_input["control_weight"] = out_tensor
         return control_inputs
 
     def gen_input_control(self, in_video, in_prompt, hint_key, control_input, output_folder):
@@ -85,7 +86,9 @@ class Preprocessors:
                     out_video=out_video,
                 )
             else:
-                log.info(f"no input_control provided for {hint_key}. generating input control video with Openpose")
+                log.info(
+                    f"no input_control provided for {hint_key}. generating input control video with Openpose"
+                )
                 self.keypoint(
                     in_video=in_video,
                     out_video=out_video,
@@ -125,23 +128,54 @@ class Preprocessors:
 
 
 if __name__ == "__main__":
-    control_inputs = dict(
-        {
-            "depth": {
-                # "input_control": "depth_control_input.mp4",  # if empty we need to run depth
-                # "control_weight" : "0.1", # if empty we need to run SAM
-                "control_weight_prompt": "a boy",  # SAM weights prompt
-            },
-            "seg": {
-                # "input_control": "seg_control_input.mp4",  # if empty we need to run SAM
-                "input_control_prompt": "A boy",
-                "control_weight_prompt": "A boy",  # if present we need to generate weight tensor
-            },
+
+
+    control_dict_960x704 = {
+        "prompt": "a robotic arm hand over a coffee cup to a woman in a modern office.",
+        "video": "assets/example1_input_video.mp4",
+        "vis": {
+            "control_weight": 0.5
         },
-    )
+        "edge": {
+            "control_weight": 0.5,
+            "control_weight_prompt": "robotic arms . gloves"
+        },
+        "depth": {
+            "input_control": "assets/example1_depth.mp4",
+            "control_weight": 0.5
+        },
+        "seg": {
+            "control_weight": 0.5,
+            "input_control": "assets/example1_seg.mp4"
+        }
+    }
+
+    control_dict_1280x704 = {
+        "prompt": "a robotic arm hand over a coffee cup to a woman in a modern office.",
+        "video": "assets/example1_input_video_1280x704.mp4",
+        "vis": {
+            "control_weight": 0.5
+        },
+        "edge": {
+            "control_weight": 0.5,
+            "control_weight_prompt": "robotic arms . gloves"
+        },
+        "depth": {
+            "input_control": "assets/example1_depth_1280x704.mp4",
+            "control_weight": 0.5
+        },
+        "seg": {
+            "control_weight": 0.5,
+            "input_control": "assets/example1_seg_1280x704.mp4"
+        }
+    }
+
 
     preprocessor = Preprocessors()
-    input_video = "cosmos_transfer1/models/sam2/assets/input_video.mp4"
 
-    preprocessor(input_video, control_inputs)
-    print(json.dumps(control_inputs, indent=4))
+    preprocessor(control_dict_960x704["video"], control_dict_960x704["prompt"], control_dict_960x704, "./output")
+    print(json.dumps(control_dict_960x704, indent=4))
+
+    preprocessor(control_dict_1280x704["video"], control_dict_1280x704["prompt"], control_dict_1280x704, "./output")
+    print(json.dumps(control_dict_1280x704, indent=4))
+    

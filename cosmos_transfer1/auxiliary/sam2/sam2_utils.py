@@ -37,7 +37,20 @@ def write_video(frames, output_path, fps=30):
     """
     expects a sequence of [H, W, 3] or [H, W] frames
     """
-    with imageio.get_writer(output_path, fps=fps, macro_block_size=8) as writer:
+    with imageio.get_writer(
+        output_path,
+        fps=fps,
+        codec='libvpx-vp9',
+        quality=None,
+        bitrate=0,
+        output_params=[
+            '-f', 'mp4',
+            '-crf', '30',  # Quality setting (0-63, lower is better quality)
+            '-deadline', 'realtime',  # Optimize for real-time encoding
+            '-cpu-used', '4',  # Speed/quality tradeoff (0-8, higher is faster)
+            '-row-mt', '1',  # Enable row-based multi-threading
+        ]
+    ) as writer:
         for frame in frames:
             if len(frame.shape) == 2:  # single channel
                 frame = frame[:, :, None].repeat(3, axis=2)
@@ -121,7 +134,7 @@ def convert_masks_to_frames(masks: list, num_masks_max: int = 100):
             rle = np.stack([rle[i] for i in frame_indices])
         all_masks[idx] = rle
         del rle
-
+ 
     all_masks = segmentation_color_mask(all_masks)  # NTHW -> 3THW
     all_masks = all_masks.transpose(1, 2, 3, 0)
     return all_masks
